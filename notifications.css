@@ -1,0 +1,32 @@
+.nav-btn .ico{
+  position:relative;
+  overflow:visible;
+}
+.nav-badge{
+  position:absolute;
+  top:-9px;
+  right:-12px;
+  min-width:18px;
+  height:18px;
+  padding:0 5px;
+  border-radius:999px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:#e5484d;
+  color:#fff;
+  border:2px solid #1f2937;
+  font-size:10px;
+  line-height:1;
+  font-weight:900;
+  letter-spacing:-.02em;
+  box-shadow:0 2px 8px rgba(229,72,77,.35);
+  z-index:2;
+}
+.nav-btn:not(.active) .nav-badge{border-color:#101828}
+.nav-badge.badge-pop{animation:badgePop .38s ease}
+@keyframes badgePop{
+  0%{transform:scale(.75)}
+  55%{transform:scale(1.22)}
+  100%{transform:scale(1)}
+}
