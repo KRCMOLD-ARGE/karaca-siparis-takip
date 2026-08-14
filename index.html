@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101828">
+<title>Karaca Sipariş Takip</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-head"><div class="logo">K</div><div><b>Karaca Sipariş Takip</b><small>Ortak erişim</small></div></div>
+    <h1>Sisteme giriş</h1>
+    <p>Şimdilik tek ortak erişim kodu kullanıyoruz. Kişi ve gerçek rol hesaplarını süreç oturduktan sonra ekleyeceğiz.</p>
+    <form id="loginForm">
+      <label>Erişim Kodu<input id="accessCodeInput" type="password" autocomplete="current-password" required autofocus></label>
+      <button class="btn primary" type="submit">Giriş Yap</button>
+    </form>
+    <div class="login-note">Veriler Supabase üzerindeki ortak veritabanında tutulur. Bu nedenle farklı bilgisayarlarda yapılan işlemler aynı sipariş kayıtlarına yansır.</div>
+  </div>
+</div>
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><div class="logo">K</div><div><b>Sipariş Takip</b><small>Basit İş Akışı</small></div></div>
+    <div class="role-box">
+      <label>Rol Simülasyonu</label>
+      <select id="roleSelect">
+        <option value="marketing">Pazarlama</option>
+        <option value="warehouse">Depo</option>
+        <option value="operations">Operasyon</option>
+        <option value="shipping">Sevkiyat</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <nav class="nav">
+      <button class="nav-btn active" data-view="work"><span class="ico">▦</span><span id="workNavLabel">İşlerim</span></button>
+      <button class="nav-btn" data-view="all" id="allNav"><span class="ico">≡</span><span>Tüm Siparişler</span></button>
+      <button class="nav-btn" data-view="flow" id="flowNav"><span class="ico">→</span><span>Akış Şeması</span></button>
+    </nav>
+    <div class="side-note">
+      <span class="conn"><i></i> Supabase ortak veritabanı</span><br><br>Kullanıcı adı ve gerçek kişi/rol ataması daha sonra eklenecek.
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="icon-btn mobile" id="menuBtn">☰</button>
+        <div><h1 id="pageTitle">Pazarlama</h1><p id="pageSubtitle">Müşteri siparişini sisteme girin ve Depo'ya gönderin.</p></div>
+      </div>
+      <div class="actions">
+        <span class="role-pill role-marketing" id="rolePill">Pazarlama</span>
+        <button class="btn" id="logoutBtn">Kilitle</button>
+        <button class="btn" id="resetBtn">Yenile</button>
+        <button class="btn primary" id="newOrderBtn">+ Yeni Sipariş</button>
+      </div>
+    </header>
+
+    <section class="stats" id="stats"></section>
+
+    <section class="toolbar" id="toolbar">
+      <div class="search"><span>⌕</span><input id="searchInput" type="search" placeholder="Sipariş no veya müşteri ara..."></div>
+      <select id="statusFilter"><option value="">Tüm durumlar</option></select>
+      <button class="btn" id="clearBtn">Temizle</button>
+    </section>
+
+    <section class="view active" id="workView">
+      <div id="warehouseTabs" class="warehouse-tabs hidden">
+        <button class="tab-btn active" data-wh-tab="first">İlk Depo Akışı</button>
+        <button class="tab-btn" data-wh-tab="second">Onay Sonrası Depo</button>
+      </div>
+      <div id="workCards" class="cards"></div>
+    </section>
+
+    <section class="view" id="allView">
+      <div class="panel">
+        <div class="panel-head"><div><h2>Tüm Siparişler</h2><p>Admin görünümü: siparişin sevk edilene kadar tüm aşamalarını izler.</p></div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Sipariş</th><th>Müşteri</th><th>İstek</th><th>Bölüm</th><th>Durum</th><th>Depo Sorumlusu</th><th>Oluşturma</th><th>Son Güncelleme</th><th></th></tr></thead>
+            <tbody id="allTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="flowView">
+      <div class="panel">
+        <div class="panel-head"><div><h2>İş Akış Şeması</h2><p>Şu anki konseptte siparişin sistem içinde izleyeceği yol.</p></div></div>
+        <div class="flow-wrap">
+          <div class="flow">
+            <div class="flow-step"><b>1. Pazarlama</b><span>Siparişi girer. Kutu / Lazer / Etiket ihtiyaçlarını seçer. Depo'ya gönderir.</span></div>
+            <div class="arrow">→</div>
+            <div class="flow-step"><b>2. Depo · İlk Aşama</b><span>Sorumlu alır. Bekleniyor / Toplanıyor / Toplandı / Kutu'da / Lazer'de / Etiket'te. Tamamlandı → Operasyon.</span></div>
+            <div class="arrow">→</div>
+            <div class="flow-step"><b>3. Operasyon</b><span>Onay Bekliyor → Onaylandı. Onaylanınca sipariş tekrar Depo'ya döner.</span></div>
+            <div class="arrow">→</div>
+            <div class="flow-step"><b>4. Depo · Son Aşama</b><span>Hazırlanıyor → Toplandı. Toplandı seçildiğinde otomatik olarak Sevkiyat'a gider.</span></div>
+            <div class="arrow">→</div>
+            <div class="flow-step"><b>5. Sevkiyat</b><span>Sipariş Hazır görünür. Sevk Edildi seçildiğinde süreç tamamlanır.</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="drawer" id="drawer"></div>
+
+<dialog id="orderDialog">
+<form id="orderForm">
+  <div class="dialog-head"><div><h2>Yeni Sipariş</h2><p>Pazarlama müşteri siparişini kaydeder ve Depo'ya gönderir.</p></div><button type="button" class="icon-btn" data-close="orderDialog">×</button></div>
+  <div class="form-grid">
+    <label><span>Sipariş No *</span><input id="orderNo" required placeholder="Örn. SP-2026-001"></label>
+    <label><span>Müşteri / Firma *</span><input id="customer" required placeholder="Örn. GB"></label>
+    <div class="span2">
+      <div style="font-size:11px;font-weight:750;margin-bottom:7px">Müşteri İsteği</div>
+      <div class="check-grid">
+        <label class="check-card"><input type="checkbox" id="reqKutu"><span>Kutu</span></label>
+        <label class="check-card"><input type="checkbox" id="reqLazer"><span>Lazer</span></label>
+        <label class="check-card"><input type="checkbox" id="reqEtiket"><span>Etiket</span></label>
+      </div>
+    </div>
+    <label class="span2"><span>Not</span><textarea id="orderNote" rows="4" placeholder="Takip için kısa not..."></textarea></label>
+  </div>
+  <div class="dialog-actions"><div class="spacer"></div><button type="button" class="btn" data-close="orderDialog">Vazgeç</button><button class="btn primary" type="submit">Depo'ya Gönder</button></div>
+</form>
+</dialog>
+
+<dialog id="detailDialog">
+  <div class="dialog-head"><div><h2 id="detailTitle">Sipariş Detayı</h2><p id="detailSub"></p></div><button type="button" class="icon-btn" data-close="detailDialog">×</button></div>
+  <div id="detailContent"></div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
+</body>
+</html>
