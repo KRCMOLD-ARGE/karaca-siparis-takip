@@ -7,6 +7,7 @@
 <title>Karaca Sipariş Takip</title>
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="staff.css">
+<link rel="stylesheet" href="notifications.css">
 </head>
 <body>
 
@@ -39,7 +40,7 @@
       <select id="personSelect"></select>
     </div>
     <nav class="nav">
-      <button class="nav-btn active" data-view="work"><span class="ico">▦</span><span id="workNavLabel">İşlerim</span></button>
+      <button class="nav-btn active" data-view="work"><span class="ico">▦<span id="workBadge" class="nav-badge hidden">0</span></span><span id="workNavLabel">İşlerim</span></button>
       <button class="nav-btn" data-view="all" id="allNav"><span class="ico">≡</span><span>Tüm Siparişler</span></button>
       <button class="nav-btn" data-view="staff" id="staffNav"><span class="ico">♟</span><span>Personel Yönetimi</span></button>
       <button class="nav-btn" data-view="flow" id="flowNav"><span class="ico">→</span><span>Akış Şeması</span></button>
@@ -180,5 +181,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>
+<script src="notifications.js"></script>
 </body>
 </html>
