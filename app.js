@@ -1,0 +1,156 @@
+const SUPABASE_URL="https://zhhtugewxipxgyetbjqo.supabase.co";
+const SUPABASE_KEY="sb_publishable_T5Uh8cM_qjhGL-h_NnmACw_y_N2gYv3";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
+const ACCESS_KEY="karaca_siparis_access";
+const ROLE_KEY="karaca_simple_role";
+const ROLE_LABEL={marketing:"Pazarlama",warehouse:"Depo",operations:"Operasyon",shipping:"Sevkiyat",admin:"Admin"};
+const ROLE_CLASS={marketing:"role-marketing",warehouse:"role-warehouse",operations:"role-operations",shipping:"role-shipping",admin:"role-admin"};
+const ROLE_META={
+  marketing:["Pazarlama","Müşteri siparişini sisteme girin ve Depo'ya gönderin."],
+  warehouse:["Depo","Size düşen siparişleri alın ve ilgili depo aşamasını yönetin."],
+  operations:["Operasyon","Depodan tamamlanan siparişleri kontrol edip onaylayın."],
+  shipping:["Sevkiyat","Hazır siparişleri görün ve sevk durumunu tamamlayın."],
+  admin:["Admin","Tüm siparişleri ve bölüm geçişlerini uçtan uca izleyin."]
+};
+const el=id=>document.getElementById(id);
+const fmt=x=>x?new Intl.DateTimeFormat("tr-TR",{dateStyle:"short",timeStyle:"short"}).format(new Date(x)):"-";
+const esc=(s="")=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+let accessCode=sessionStorage.getItem(ACCESS_KEY)||"";
+let orders=[];
+let role=localStorage.getItem(ROLE_KEY)||"marketing";
+let view="work";
+let whTab="first";
+let refreshing=false;
+
+function mapOrder(o){
+  return {id:o.id,orderNo:o.order_no,customer:o.customer,requirements:o.requirements||[],note:o.note||"",phase:o.phase,warehouse1Status:o.warehouse1_status||"",warehouse2Status:o.warehouse2_status||"",operationStatus:o.operation_status||"",shippingStatus:o.shipping_status||"",warehouseOwner:o.warehouse_owner||"",createdAt:o.created_at,updatedAt:o.updated_at,history:Array.isArray(o.history)?o.history:[]};
+}
+async function rpc(name,args){
+  const {data,error}=await sb.rpc(name,args);
+  if(error)throw error;
+  return data;
+}
+function isAuthError(err){return err&&(err.code==="42501"||/erisim|access|permission/i.test(err.message||""));}
+async function validateCode(code){
+  try{return !!(await rpc("app_login",{p_passcode:code}));}catch{return false;}
+}
+async function refreshOrders(silent=false){
+  if(!accessCode||refreshing)return;
+  refreshing=true;
+  try{
+    const data=await rpc("app_list_orders",{p_passcode:accessCode});
+    orders=(Array.isArray(data)?data:[]).map(mapOrder);
+    render();
+    if(!silent)toast("Veriler yenilendi");
+  }catch(err){
+    console.error(err);
+    if(isAuthError(err)){lockApp("Erişim kodu geçersiz veya değiştirildi.");}
+    else if(!silent)toast("Supabase bağlantısı kurulamadı");
+  }finally{refreshing=false;}
+}
+function lockApp(message=""){
+  sessionStorage.removeItem(ACCESS_KEY);accessCode="";el("loginScreen").classList.remove("hidden");el("accessCodeInput").value="";if(message)toast(message);
+}
+async function boot(){
+  el("roleSelect").value=role;
+  if(accessCode&&await validateCode(accessCode)){el("loginScreen").classList.add("hidden");await refreshOrders(true);}else{lockApp();}
+}
+el("loginForm").onsubmit=async e=>{
+  e.preventDefault();const code=el("accessCodeInput").value.trim();
+  if(!code)return;
+  const btn=e.currentTarget.querySelector("button");btn.disabled=true;btn.textContent="Kontrol ediliyor...";
+  const ok=await validateCode(code);btn.disabled=false;btn.textContent="Giriş Yap";
+  if(!ok){toast("Erişim kodu hatalı");return;}
+  accessCode=code;sessionStorage.setItem(ACCESS_KEY,code);el("loginScreen").classList.add("hidden");await refreshOrders(true);toast("Sisteme bağlandı");
+};
+el("logoutBtn").onclick=()=>lockApp();
+
+function currentDepartment(o){
+  if(o.phase==="warehouse1"||o.phase==="warehouse2")return"Depo";
+  if(o.phase==="operations")return"Operasyon";
+  if(o.phase==="shipping")return"Sevkiyat";
+  if(o.phase==="done")return"Tamamlandı";
+  return"Pazarlama";
+}
+function currentStatus(o){
+  if(o.phase==="warehouse1")return o.warehouse1Status||"Bekleniyor";
+  if(o.phase==="operations")return o.operationStatus||"Onay Bekliyor";
+  if(o.phase==="warehouse2")return o.warehouse2Status||"Hazırlanıyor";
+  if(o.phase==="shipping")return o.shippingStatus||"Hazır";
+  if(o.phase==="done")return"Sevk Edildi";
+  return"Yeni";
+}
+function requirementsHtml(req=[]){
+  if(!req.length)return`<span class="chip chip-empty">Standart</span>`;
+  return req.map(x=>`<span class="chip ${x==="Kutu"?"chip-kutu":x==="Lazer"?"chip-lazer":"chip-etiket"}">${esc(x)}</span>`).join("");
+}
+function warehouse1Options(o){
+  const base=["Bekleniyor","Toplanıyor","Toplandı"];
+  if(o.requirements.includes("Kutu"))base.push("Kutu'da");
+  if(o.requirements.includes("Lazer"))base.push("Lazer'de");
+  if(o.requirements.includes("Etiket"))base.push("Etiket'te");
+  base.push("Tamamlandı");return base;
+}
+function filtered(list){
+  const q=el("searchInput").value.trim().toLocaleLowerCase("tr-TR"),f=el("statusFilter").value;
+  return list.filter(o=>{if(q&&!`${o.orderNo} ${o.customer} ${o.note||""}`.toLocaleLowerCase("tr-TR").includes(q))return false;if(f&&currentStatus(o)!==f)return false;return true;});
+}
+function roleOrders(){
+  if(role==="marketing")return orders;
+  if(role==="warehouse")return orders.filter(o=>whTab==="first"?o.phase==="warehouse1":o.phase==="warehouse2");
+  if(role==="operations")return orders.filter(o=>o.phase==="operations");
+  if(role==="shipping")return orders.filter(o=>o.phase==="shipping");
+  return orders;
+}
+function render(){
+  el("roleSelect").value=role;const meta=ROLE_META[role];el("pageTitle").textContent=meta[0];el("pageSubtitle").textContent=meta[1];
+  el("rolePill").textContent=ROLE_LABEL[role];el("rolePill").className=`role-pill ${ROLE_CLASS[role]}`;
+  el("newOrderBtn").classList.toggle("hidden",role!=="marketing"&&role!=="admin");el("allNav").classList.toggle("hidden",role!=="admin");el("flowNav").classList.toggle("hidden",role!=="admin");el("warehouseTabs").classList.toggle("hidden",role!=="warehouse");el("workNavLabel").textContent=role==="admin"?"Özet":"İşlerim";
+  if(role!=="admin"&&view!=="work"){view="work";switchView("work",false)}
+  renderStats();renderStatusFilter();renderWork();renderAll();
+}
+function renderStats(){
+  let data;
+  if(role==="admin")data=[["Toplam Sipariş",orders.length,"Tüm kayıtlar"],["Depo",orders.filter(o=>["warehouse1","warehouse2"].includes(o.phase)).length,"İki depo aşaması"],["Operasyon",orders.filter(o=>o.phase==="operations").length,"Onay süreci"],["Sevkiyat",orders.filter(o=>o.phase==="shipping").length,"Hazır siparişler"],["Tamamlandı",orders.filter(o=>o.phase==="done").length,"Sevk edildi"]];
+  else if(role==="marketing")data=[["Toplam Girdi",orders.length,"Pazarlama kayıtları"],["Depoda",orders.filter(o=>["warehouse1","warehouse2"].includes(o.phase)).length,"Aktif"],["Operasyonda",orders.filter(o=>o.phase==="operations").length,"Onayda"],["Sevkiyatta",orders.filter(o=>o.phase==="shipping").length,"Hazır"],["Sevk Edildi",orders.filter(o=>o.phase==="done").length,"Tamamlanan"]];
+  else{const mine=roleOrders();data=[["Ekranımdaki",mine.length,"Aktif kayıt"],["Bekleyen",mine.filter(o=>/Bekliyor|Bekleniyor|Hazırlanıyor/.test(currentStatus(o))).length,"Aksiyon bekleyen"],["İşlemde",mine.filter(o=>/Toplanıyor|Kutu'da|Lazer'de|Etiket'te/.test(currentStatus(o))).length,"Devam eden"],["Hazır / Onay",mine.filter(o=>/Toplandı|Onaylandı|Hazır/.test(currentStatus(o))).length,"Sonraki adıma yakın"],["Toplam Sistem",orders.length,"Genel kayıt"]]}
+  el("stats").innerHTML=data.map(x=>`<div class="stat"><span>${x[0]}</span><b>${x[1]}</b><small>${x[2]}</small></div>`).join("");
+}
+function renderStatusFilter(){const cur=el("statusFilter").value,sts=[...new Set(roleOrders().map(currentStatus))].sort((a,b)=>a.localeCompare(b,"tr"));el("statusFilter").innerHTML=`<option value="">Tüm durumlar</option>`+sts.map(s=>`<option ${s===cur?"selected":""}>${esc(s)}</option>`).join("");}
+function renderWork(){const list=filtered(roleOrders());el("workCards").innerHTML=list.length?list.map(orderCard).join(""):`<div class="empty" style="grid-column:1/-1"><b>Bu ekranda aktif sipariş yok.</b>Akışa göre yeni sipariş geldiğinde burada görünecek.</div>`;wireCards();}
+function orderCard(o){const dep=currentDepartment(o),st=currentStatus(o);return `<article class="order-card"><div class="card-top"><span class="order-no">${esc(o.orderNo)}</span><span class="status-pill status-${o.phase==="warehouse1"||o.phase==="warehouse2"?"warehouse":o.phase==="operations"?"operations":o.phase==="shipping"?"shipping":o.phase==="done"?"done":"marketing"}">${esc(st)}</span></div><h3>${esc(o.customer)}</h3><div class="card-sub">${esc(dep)} · Son güncelleme ${fmt(o.updatedAt)}</div><div class="chips">${requirementsHtml(o.requirements)}</div><div class="card-grid"><div class="meta"><span>Depo Sorumlusu</span><strong>${esc(o.warehouseOwner||"Atanmadı")}</strong></div><div class="meta"><span>Aşama</span><strong>${esc(dep)}</strong></div></div>${role==="warehouse"?warehouseControls(o):role==="operations"?operationsControls(o):role==="shipping"?shippingControls(o):`<div class="card-actions"><button class="btn small" data-detail="${o.id}">Detay</button></div>`}</article>`;}
+function warehouseControls(o){
+  if(o.phase==="warehouse1"){const opts=warehouse1Options(o).map(s=>`<option ${s===o.warehouse1Status?"selected":""}>${s}</option>`).join("");return `<div class="inline-form"><input data-owner="${o.id}" value="${esc(o.warehouseOwner||"")}" placeholder="Sorumlu kişi"><button class="btn small" data-claim="${o.id}">Üzerime Al</button><select data-wh1="${o.id}">${opts}</select><button class="btn small" data-detail="${o.id}">Detay</button></div>`;}
+  const opts=["Hazırlanıyor","Toplandı"].map(s=>`<option ${s===o.warehouse2Status?"selected":""}>${s}</option>`).join("");return `<div class="inline-form"><input data-owner="${o.id}" value="${esc(o.warehouseOwner||"")}" placeholder="Sorumlu kişi"><button class="btn small" data-claim="${o.id}">Üzerime Al</button><select data-wh2="${o.id}">${opts}</select><button class="btn small" data-detail="${o.id}">Detay</button></div>`;
+}
+function operationsControls(o){return `<div class="card-actions"><button class="btn small" data-detail="${o.id}">Detay</button><button class="btn success small" data-approve="${o.id}">Onayla ve Depo'ya Gönder</button></div>`;}
+function shippingControls(o){return `<div class="card-actions"><button class="btn small" data-detail="${o.id}">Detay</button><button class="btn success small" data-ship="${o.id}">Sevk Edildi</button></div>`;}
+async function updateOrder(id,patch,eventText){
+  try{await rpc("app_update_order",{p_passcode:accessCode,p_id:id,p_patch:patch,p_event_text:eventText});await refreshOrders(true);toast(eventText);}catch(err){console.error(err);toast("Güncelleme yapılamadı");}
+}
+function wireCards(){
+  document.querySelectorAll("[data-detail]").forEach(b=>b.onclick=()=>openDetail(b.dataset.detail));
+  document.querySelectorAll("[data-owner]").forEach(inp=>inp.onchange=()=>updateOrder(inp.dataset.owner,{warehouse_owner:inp.value.trim()},`Depo sorumlusu: ${inp.value.trim()||"Atanmadı"}`));
+  document.querySelectorAll("[data-claim]").forEach(b=>b.onclick=()=>updateOrder(b.dataset.claim,{warehouse_owner:"Depo Kullanıcısı"},"Sipariş Depo Kullanıcısı tarafından üzerine alındı."));
+  document.querySelectorAll("[data-wh1]").forEach(s=>s.onchange=()=>{const val=s.value;if(val==="Tamamlandı")updateOrder(s.dataset.wh1,{warehouse1_status:val,phase:"operations",operation_status:"Onay Bekliyor"},"Depo ilk aşaması tamamlandı. Sipariş Operasyona gönderildi: Onay Bekliyor");else updateOrder(s.dataset.wh1,{warehouse1_status:val},`Depo durumu: ${val}`);});
+  document.querySelectorAll("[data-wh2]").forEach(s=>s.onchange=()=>{const val=s.value;if(val==="Toplandı")updateOrder(s.dataset.wh2,{warehouse2_status:val,phase:"shipping",shipping_status:"Hazır"},"Depo ikinci aşaması Toplandı. Sipariş Sevkiyat'a geçti: Hazır");else updateOrder(s.dataset.wh2,{warehouse2_status:val},`Onay sonrası Depo durumu: ${val}`);});
+  document.querySelectorAll("[data-approve]").forEach(b=>b.onclick=()=>updateOrder(b.dataset.approve,{operation_status:"Onaylandı",phase:"warehouse2",warehouse2_status:"Hazırlanıyor"},"Operasyon siparişi onayladı. Sipariş tekrar Depo'ya gönderildi: Hazırlanıyor"));
+  document.querySelectorAll("[data-ship]").forEach(b=>b.onclick=()=>updateOrder(b.dataset.ship,{shipping_status:"Sevk Edildi",phase:"done"},"Sevkiyat siparişi Sevk Edildi olarak tamamladı."));
+}
+function renderAll(){const rows=[...orders].sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));el("allTable").innerHTML=rows.length?rows.map(o=>`<tr><td><strong>${esc(o.orderNo)}</strong></td><td>${esc(o.customer)}</td><td><div class="chips" style="margin:0">${requirementsHtml(o.requirements)}</div></td><td>${esc(currentDepartment(o))}</td><td><span class="status-pill status-${o.phase==="warehouse1"||o.phase==="warehouse2"?"warehouse":o.phase==="operations"?"operations":o.phase==="shipping"?"shipping":o.phase==="done"?"done":"marketing"}">${esc(currentStatus(o))}</span></td><td>${esc(o.warehouseOwner||"-")}</td><td>${fmt(o.createdAt)}</td><td>${fmt(o.updatedAt)}</td><td><button class="btn small" data-all-detail="${o.id}">Detay</button></td></tr>`).join(""):`<tr><td colspan="9">Henüz sipariş yok.</td></tr>`;document.querySelectorAll("[data-all-detail]").forEach(b=>b.onclick=()=>openDetail(b.dataset.allDetail));}
+function openDetail(id){const o=orders.find(x=>x.id===id);if(!o)return;el("detailTitle").textContent=`${o.orderNo} · ${o.customer}`;el("detailSub").textContent=`${currentDepartment(o)} · ${currentStatus(o)}`;el("detailContent").innerHTML=`<div class="detail-grid"><div class="detail-box"><span>Müşteri</span><strong>${esc(o.customer)}</strong></div><div class="detail-box"><span>Bölüm</span><strong>${esc(currentDepartment(o))}</strong></div><div class="detail-box"><span>Durum</span><strong>${esc(currentStatus(o))}</strong></div><div class="detail-box"><span>Depo Sorumlusu</span><strong>${esc(o.warehouseOwner||"Atanmadı")}</strong></div><div class="detail-box"><span>Müşteri İsteği</span><strong>${o.requirements.length?esc(o.requirements.join(", ")):"Standart"}</strong></div><div class="detail-box"><span>Son Güncelleme</span><strong>${fmt(o.updatedAt)}</strong></div></div>${o.note?`<div class="note">${esc(o.note)}</div>`:""}<div class="timeline"><h3 style="margin:0 0 5px;font-size:12px">İşlem Geçmişi</h3>${(o.history||[]).map(h=>`<div class="timeline-item"><i></i><div><b>${esc(h.text)}</b><small>${fmt(h.at)}</small></div></div>`).join("")||"<small>Henüz işlem geçmişi yok.</small>"}</div>`;el("detailDialog").showModal();}
+function switchView(v,close=true){view=v;document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));el(v+"View").classList.add("active");document.querySelectorAll(".nav-btn[data-view]").forEach(x=>x.classList.toggle("active",x.dataset.view===v));if(close)closeSidebar();}
+el("roleSelect").onchange=()=>{role=el("roleSelect").value;localStorage.setItem(ROLE_KEY,role);whTab="first";document.querySelectorAll("[data-wh-tab]").forEach(x=>x.classList.toggle("active",x.dataset.whTab==="first"));switchView("work",false);render();};
+document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>switchView(b.dataset.view));
+document.querySelectorAll("[data-wh-tab]").forEach(b=>b.onclick=()=>{whTab=b.dataset.whTab;document.querySelectorAll("[data-wh-tab]").forEach(x=>x.classList.toggle("active",x===b));render();});
+["searchInput","statusFilter"].forEach(id=>el(id).addEventListener(id==="searchInput"?"input":"change",renderWork));
+el("clearBtn").onclick=()=>{el("searchInput").value="";el("statusFilter").value="";renderWork();};
+el("newOrderBtn").onclick=()=>{el("orderForm").reset();el("orderDialog").showModal();};
+el("orderForm").onsubmit=async e=>{e.preventDefault();if(!e.currentTarget.reportValidity())return;const req=[];if(el("reqKutu").checked)req.push("Kutu");if(el("reqLazer").checked)req.push("Lazer");if(el("reqEtiket").checked)req.push("Etiket");const btn=e.currentTarget.querySelector('button[type="submit"]');btn.disabled=true;try{await rpc("app_create_order",{p_passcode:accessCode,p_order_no:el("orderNo").value.trim(),p_customer:el("customer").value.trim(),p_requirements:req,p_note:el("orderNote").value.trim()||null});el("orderDialog").close();await refreshOrders(true);toast("Sipariş Depo'ya gönderildi");}catch(err){console.error(err);toast(/duplicate|unique/i.test(err.message||"")?"Bu sipariş numarası zaten var":"Sipariş kaydedilemedi");}finally{btn.disabled=false;}};
+el("resetBtn").onclick=()=>refreshOrders(false);
+document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>el(b.dataset.close).close());
+function toast(msg){const t=el("toast");t.textContent=msg;t.classList.add("show");clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.classList.remove("show"),2300);}
+const sidebar=el("sidebar");function closeSidebar(){sidebar.classList.remove("open");el("drawer").classList.remove("show")}
+el("menuBtn").onclick=()=>{sidebar.classList.toggle("open");el("drawer").classList.toggle("show",sidebar.classList.contains("open"));};el("drawer").onclick=closeSidebar;
+setInterval(()=>{if(accessCode&&!document.hidden&&!document.querySelector('dialog[open]')&&!document.querySelector('input:focus,select:focus,textarea:focus'))refreshOrders(true);},10000);
+boot();
