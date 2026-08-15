@@ -1,5 +1,18 @@
 (() => {
-  let lastCount = -1;
+  const lastCounts = { work: -1, first: -1, second: -1 };
+
+  function badgeText(count) {
+    return count > 99 ? "99+" : String(count);
+  }
+
+  function animateIfIncreased(badge, key, count) {
+    if (lastCounts[key] >= 0 && count > lastCounts[key]) {
+      badge.classList.remove("badge-pop");
+      void badge.offsetWidth;
+      badge.classList.add("badge-pop");
+    }
+    lastCounts[key] = count;
+  }
 
   function activeCountForRole() {
     if (typeof orders === "undefined" || !Array.isArray(orders) || typeof role === "undefined") return 0;
@@ -25,17 +38,53 @@
     if (!badge) return;
 
     const count = activeCountForRole();
-    badge.textContent = count > 99 ? "99+" : String(count);
+    badge.textContent = badgeText(count);
     badge.classList.toggle("hidden", count === 0);
     badge.setAttribute("aria-label", `${count} aktif iş`);
     badge.title = `${count} aktif iş`;
+    animateIfIncreased(badge, "work", count);
+  }
 
-    if (lastCount >= 0 && count > lastCount) {
-      badge.classList.remove("badge-pop");
-      void badge.offsetWidth;
-      badge.classList.add("badge-pop");
+  function getOrCreateTabBadge(tab, key) {
+    if (!tab) return null;
+    let badge = tab.querySelector(`.tab-badge[data-badge="${key}"]`);
+    if (!badge) {
+      badge = document.createElement("span");
+      badge.className = "tab-badge hidden";
+      badge.dataset.badge = key;
+      badge.setAttribute("aria-hidden", "true");
+      tab.appendChild(badge);
     }
-    lastCount = count;
+    return badge;
+  }
+
+  function renderWarehouseTabBadges() {
+    if (typeof orders === "undefined" || !Array.isArray(orders)) return;
+
+    const firstTab = document.querySelector('[data-wh-tab="first"]');
+    const secondTab = document.querySelector('[data-wh-tab="second"]');
+    const firstBadge = getOrCreateTabBadge(firstTab, "first");
+    const secondBadge = getOrCreateTabBadge(secondTab, "second");
+
+    if (!firstBadge || !secondBadge) return;
+
+    const firstCount = orders.filter(o => o.phase === "warehouse1").length;
+    const secondCount = orders.filter(o => o.phase === "warehouse2").length;
+
+    firstBadge.textContent = badgeText(firstCount);
+    firstBadge.classList.toggle("hidden", firstCount === 0);
+    firstBadge.title = `${firstCount} sipariş İlk Depo Akışında`;
+    animateIfIncreased(firstBadge, "first", firstCount);
+
+    secondBadge.textContent = badgeText(secondCount);
+    secondBadge.classList.toggle("hidden", secondCount === 0);
+    secondBadge.title = `${secondCount} sipariş Onay Sonrası Depoda`;
+    animateIfIncreased(secondBadge, "second", secondCount);
+  }
+
+  function renderNotificationBadges() {
+    renderWorkBadge();
+    renderWarehouseTabBadges();
   }
 
   // app.js içindeki ana render fonksiyonuna bağlanır.
@@ -43,13 +92,13 @@
     const baseRender = render;
     render = function (...args) {
       const result = baseRender.apply(this, args);
-      renderWorkBadge();
+      renderNotificationBadges();
       return result;
     };
   }
 
-  document.getElementById("roleSelect")?.addEventListener("change", () => setTimeout(renderWorkBadge, 0));
-  document.getElementById("personSelect")?.addEventListener("change", () => setTimeout(renderWorkBadge, 0));
+  document.getElementById("roleSelect")?.addEventListener("change", () => setTimeout(renderNotificationBadges, 0));
+  document.getElementById("personSelect")?.addEventListener("change", () => setTimeout(renderNotificationBadges, 0));
 
   // Depoda "Üzerime Al" işlemi, kartta seçili sorumluyu esas alır.
   // Kartta seçim yoksa sol menüde seçili Depo personeli kullanılır.
@@ -89,6 +138,6 @@
   }, true);
 
   // Supabase otomatik yenilemelerine karşı emniyetli güncelleme.
-  setInterval(renderWorkBadge, 3000);
-  setTimeout(renderWorkBadge, 0);
+  setInterval(renderNotificationBadges, 3000);
+  setTimeout(renderNotificationBadges, 0);
 })();
