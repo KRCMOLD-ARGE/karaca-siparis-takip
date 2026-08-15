@@ -1,5 +1,15 @@
 #workCards.warehouse-grouped{
-  display:block;
+  display:block!important;
+  width:100%;
+}
+
+/* Pazarlama -> Depo geçişinde üst grid sınıfı kalsa bile her Depo bölümü tam satır kaplasın. */
+#workCards.warehouse-grouped > .warehouse-order-section{
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+  grid-column:1 / -1!important;
+  clear:both;
 }
 
 .warehouse-order-section{
@@ -19,6 +29,7 @@
   gap:12px;
   margin:0 0 12px;
   padding:0 2px;
+  width:100%;
 }
 
 .warehouse-order-section-head small{
@@ -60,10 +71,19 @@
   border:1px solid #dbe3ff;
 }
 
+/* Depoda da masaüstünde bir satırda en fazla 3 sipariş kartı göster. */
 .warehouse-order-grid{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
+  display:grid!important;
+  width:100%!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
   gap:12px;
+  align-items:stretch;
+}
+
+.warehouse-order-grid > .order-card{
+  width:100%!important;
+  min-width:0!important;
+  max-width:none!important;
 }
 
 .warehouse-order-empty{
@@ -83,10 +103,10 @@
 }
 
 @media(max-width:1150px){
-  .warehouse-order-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .warehouse-order-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }
 
 @media(max-width:800px){
-  .warehouse-order-grid{grid-template-columns:1fr}
+  .warehouse-order-grid{grid-template-columns:1fr!important}
   .warehouse-order-section-head{align-items:flex-start;flex-direction:column;gap:4px}
 }
