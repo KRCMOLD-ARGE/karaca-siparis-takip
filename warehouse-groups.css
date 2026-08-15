@@ -1,0 +1,92 @@
+#workCards.warehouse-grouped{
+  display:block;
+}
+
+.warehouse-order-section{
+  width:100%;
+}
+
+.warehouse-order-section + .warehouse-order-section{
+  margin-top:22px;
+  padding-top:22px;
+  border-top:2px solid #d0d5dd;
+}
+
+.warehouse-order-section-head{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+  margin:0 0 12px;
+  padding:0 2px;
+}
+
+.warehouse-order-section-head small{
+  color:#98a2b3;
+  font-size:11px;
+}
+
+.warehouse-order-section-title{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  font-size:15px;
+  font-weight:850;
+  color:#344054;
+}
+
+.warehouse-order-count{
+  min-width:24px;
+  height:24px;
+  padding:0 7px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:999px;
+  font-size:11px;
+  line-height:1;
+  font-weight:900;
+}
+
+.warehouse-order-count-new{
+  background:#fee4e2;
+  color:#b42318;
+  border:1px solid #fecdca;
+}
+
+.warehouse-order-count-active{
+  background:#eef4ff;
+  color:#3538cd;
+  border:1px solid #dbe3ff;
+}
+
+.warehouse-order-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+}
+
+.warehouse-order-empty{
+  grid-column:1/-1;
+  border:1px dashed #d0d5dd;
+  border-radius:13px;
+  padding:18px;
+  text-align:center;
+  color:#98a2b3;
+  background:#fafbfc;
+  font-size:12px;
+}
+
+.warehouse-order-section-new .order-card{
+  border-color:#f4c7c3;
+  box-shadow:0 2px 10px rgba(180,35,24,.05);
+}
+
+@media(max-width:1150px){
+  .warehouse-order-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media(max-width:800px){
+  .warehouse-order-grid{grid-template-columns:1fr}
+  .warehouse-order-section-head{align-items:flex-start;flex-direction:column;gap:4px}
+}
