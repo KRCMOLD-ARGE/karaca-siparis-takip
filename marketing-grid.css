@@ -1,0 +1,20 @@
+#workCards.marketing-three-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+}
+
+#workCards.marketing-three-grid .order-card{
+  min-width:0;
+}
+
+@media(max-width:920px){
+  #workCards.marketing-three-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
+@media(max-width:650px){
+  #workCards.marketing-three-grid{
+    grid-template-columns:1fr;
+  }
+}
