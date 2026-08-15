@@ -40,8 +40,10 @@
         return orders.filter(o => o.phase === "operations").length;
       case "shipping":
         return orders.filter(o => o.phase === "shipping").length;
-      case "marketing":
-        return orders.filter(o => o.phase !== "done").length;
+      case "marketing": {
+        const visible = typeof roleOrders === "function" ? roleOrders() : orders;
+        return visible.filter(o => o.phase !== "done").length;
+      }
       case "admin":
         return orders.filter(o => o.phase !== "done").length;
       default:
