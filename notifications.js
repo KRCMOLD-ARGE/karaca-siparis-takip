@@ -82,9 +82,63 @@
     animateIfIncreased(secondBadge, "second", secondCount);
   }
 
+  function elapsedText(order) {
+    if (!order?.createdAt) return "-";
+    const start = new Date(order.createdAt).getTime();
+    if (!Number.isFinite(start)) return "-";
+
+    // Tamamlanan siparişlerde süre artık ilerlemez; son güncellemede donar.
+    const finishedAt = order.phase === "done" && order.updatedAt
+      ? new Date(order.updatedAt).getTime()
+      : Date.now();
+    const diffMs = Math.max(0, finishedAt - start);
+    const hours = Math.floor(diffMs / 3600000);
+
+    if (hours < 24) return `${hours} saat`;
+    return `${Math.floor(hours / 24)} gün`;
+  }
+
+  function renderOrderAges() {
+    if (typeof orders === "undefined" || !Array.isArray(orders)) return;
+
+    document.querySelectorAll(".order-card").forEach(card => {
+      const orderNo = card.querySelector(".order-no")?.textContent?.trim();
+      if (!orderNo) return;
+      const order = orders.find(o => String(o.orderNo).trim() === orderNo);
+      if (!order) return;
+
+      const cardTop = card.querySelector(".card-top");
+      const status = cardTop?.querySelector(".status-pill");
+      if (!cardTop || !status) return;
+
+      let stack = cardTop.querySelector(".card-status-stack");
+      if (!stack) {
+        stack = document.createElement("div");
+        stack.className = "card-status-stack";
+        status.replaceWith(stack);
+        stack.appendChild(status);
+      }
+
+      let age = stack.querySelector(".order-age");
+      if (!age) {
+        age = document.createElement("span");
+        age.className = "order-age";
+        stack.appendChild(age);
+      }
+
+      const text = elapsedText(order);
+      age.textContent = `◷ ${text}`;
+      age.title = order.phase === "done"
+        ? `Toplam sipariş süresi: ${text}`
+        : `Sipariş açılalı: ${text}`;
+      age.classList.toggle("order-age-done", order.phase === "done");
+    });
+  }
+
   function renderNotificationBadges() {
     renderWorkBadge();
     renderWarehouseTabBadges();
+    renderOrderAges();
   }
 
   // app.js içindeki ana render fonksiyonuna bağlanır.
@@ -137,7 +191,7 @@
     }
   }, true);
 
-  // Supabase otomatik yenilemelerine karşı emniyetli güncelleme.
+  // Supabase otomatik yenilemelerine ve saat/gün değişimine karşı güncel tut.
   setInterval(renderNotificationBadges, 3000);
   setTimeout(renderNotificationBadges, 0);
 })();
