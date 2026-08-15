@@ -70,10 +70,25 @@
     return orders.find(order => String(order.orderNo || "").trim() === orderNo) || null;
   }
 
+  function operationStatusLabel(order) {
+    if (order?.phase !== "operations") return "";
+    const status = typeof currentStatus === "function"
+      ? currentStatus(order)
+      : (order.operationStatus || "Onay Bekliyor");
+    return `Operasyonda · ${status}`;
+  }
+
   function decorateOrderCards() {
     document.querySelectorAll(".order-card").forEach(card => {
       const order = orderForCard(card);
       if (!order) return;
+
+      const statusPill = card.querySelector(".status-pill");
+      const operationLabel = operationStatusLabel(order);
+      if (statusPill && operationLabel) {
+        statusPill.textContent = operationLabel;
+        statusPill.title = "Sipariş şu anda Operasyon bölümünde";
+      }
 
       card.classList.toggle("urgent-order-card", !!order.urgent);
       const existing = card.querySelector("[data-urgent-order-badge]");
@@ -103,6 +118,13 @@
       const row = button.closest("tr");
       const firstCell = row?.querySelector("td");
       if (!order || !row || !firstCell) return;
+
+      const statusPill = row.querySelector(".status-pill");
+      const operationLabel = operationStatusLabel(order);
+      if (statusPill && operationLabel) {
+        statusPill.textContent = operationLabel;
+        statusPill.title = "Sipariş şu anda Operasyon bölümünde";
+      }
 
       row.classList.toggle("urgent-admin-row", !!order.urgent);
       const existing = firstCell.querySelector("[data-urgent-order-mini]");
