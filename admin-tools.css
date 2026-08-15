@@ -13,8 +13,26 @@
 .admin-intervene-btn:hover{
   background:#eef2f6;
 }
+.admin-note-btn{
+  width:34px;
+  min-width:34px;
+  padding-left:0;
+  padding-right:0;
+  border-color:#c7d7fe;
+  background:#f5f8ff;
+  color:#3448c5;
+  font-size:16px;
+  font-weight:900;
+}
+.admin-note-btn:hover{
+  background:#eaf0ff;
+  border-color:#a9bcfb;
+}
 #adminOrderDialog{
   width:min(620px,calc(100vw - 28px));
+}
+#adminOrderNoteDialog{
+  width:min(560px,calc(100vw - 28px));
 }
 .admin-order-tool-grid{
   display:grid;
@@ -97,7 +115,51 @@
   font-size:12px;
   font-weight:750;
 }
+.admin-note-wrap{
+  padding:0 21px 14px;
+}
+.admin-note-wrap label>span{
+  display:block;
+  margin-bottom:7px;
+  color:#344054;
+  font-size:11px;
+  font-weight:800;
+}
+.admin-note-wrap textarea{
+  width:100%;
+  min-height:150px;
+  resize:vertical;
+  border:1px solid #d0d5dd;
+  border-radius:12px;
+  padding:12px 13px;
+  font:inherit;
+  line-height:1.5;
+  color:#101828;
+  background:#fff;
+}
+.admin-note-wrap textarea:focus{
+  outline:none;
+  border-color:#84adff;
+  box-shadow:0 0 0 3px rgba(80,120,255,.1);
+}
+.admin-note-meta{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-top:7px;
+  color:#667085;
+}
+.admin-note-meta small{
+  line-height:1.45;
+}
+.admin-note-meta span{
+  white-space:nowrap;
+  font-size:10px;
+  font-weight:800;
+}
 @media(max-width:640px){
   .admin-order-tool-grid{grid-template-columns:1fr}
   .admin-order-actions{justify-content:flex-start}
+  .admin-note-meta{flex-direction:column;gap:4px}
 }
