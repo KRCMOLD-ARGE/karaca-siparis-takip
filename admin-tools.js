@@ -36,12 +36,49 @@
   `;
   document.body.appendChild(dialog);
 
+  const noteDialog = document.createElement("dialog");
+  noteDialog.id = "adminOrderNoteDialog";
+  noteDialog.innerHTML = `
+    <form id="adminOrderNoteForm">
+      <div class="dialog-head">
+        <div>
+          <h2 id="adminOrderNoteTitle">Sipariş Notu</h2>
+          <p id="adminOrderNoteSub">Admin sipariş için özel bir takip notu yazabilir.</p>
+        </div>
+        <button type="button" class="icon-btn" data-admin-note-close>×</button>
+      </div>
+      <div class="admin-note-wrap">
+        <label>
+          <span>Admin Notu</span>
+          <textarea id="adminOrderNoteText" rows="7" maxlength="1000" placeholder="Örn. Bu sipariş önceliklidir, depo sorumlusu değiştirildiğinde kontrol edin..."></textarea>
+        </label>
+        <div class="admin-note-meta">
+          <small>Bu not yalnızca Admin panelinde görünür. Metni boş kaydederseniz not kaldırılır.</small>
+          <span id="adminOrderNoteCounter">0 / 1000</span>
+        </div>
+      </div>
+      <div id="adminOrderNoteError" class="admin-tool-error hidden"></div>
+      <div class="dialog-actions">
+        <div class="spacer"></div>
+        <button type="button" class="btn" data-admin-note-close>Vazgeç</button>
+        <button type="submit" class="btn primary" id="adminOrderNoteSave">Notu Kaydet</button>
+      </div>
+    </form>
+  `;
+  document.body.appendChild(noteDialog);
+
   const form = document.getElementById("adminOrderToolForm");
   const ownerSelect = document.getElementById("adminToolWarehouseOwner");
   const deleteBtn = document.getElementById("adminToolDelete");
   const saveBtn = document.getElementById("adminToolSaveOwner");
   const errorBox = document.getElementById("adminToolError");
+  const noteForm = document.getElementById("adminOrderNoteForm");
+  const noteText = document.getElementById("adminOrderNoteText");
+  const noteSaveBtn = document.getElementById("adminOrderNoteSave");
+  const noteErrorBox = document.getElementById("adminOrderNoteError");
+  const noteCounter = document.getElementById("adminOrderNoteCounter");
   let currentOrderId = "";
+  let currentNoteOrderId = "";
 
   function currentAdminSession() {
     return window.__karacaAdminSession || null;
@@ -51,6 +88,17 @@
     if (!errorBox) return;
     errorBox.textContent = message;
     errorBox.classList.toggle("hidden", !message);
+  }
+
+  function setNoteError(message = "") {
+    if (!noteErrorBox) return;
+    noteErrorBox.textContent = message;
+    noteErrorBox.classList.toggle("hidden", !message);
+  }
+
+  function updateNoteCounter() {
+    if (!noteCounter || !noteText) return;
+    noteCounter.textContent = `${noteText.value.length} / 1000`;
   }
 
   function orderById(id) {
@@ -107,6 +155,45 @@
     });
   }
 
+  async function openNote(orderId) {
+    if (typeof role === "undefined" || role !== "admin") return;
+    if (!currentAdminSession()) {
+      if (typeof toast === "function") toast("Admin oturumu doğrulanmalı. Admin bölümüne yeniden giriş yapın.");
+      return;
+    }
+
+    const order = orderById(orderId);
+    if (!order) {
+      if (typeof toast === "function") toast("Sipariş bulunamadı");
+      return;
+    }
+
+    currentNoteOrderId = order.id;
+    setNoteError("");
+    document.getElementById("adminOrderNoteTitle").textContent = `Sipariş Notu · ${order.orderNo}`;
+    document.getElementById("adminOrderNoteSub").textContent = `${order.customer || "-"} · ${phaseLabel(order)}`;
+    noteText.value = "";
+    noteText.disabled = true;
+    noteSaveBtn.disabled = true;
+    noteSaveBtn.textContent = "Yükleniyor...";
+    updateNoteCounter();
+    noteDialog.showModal();
+
+    try {
+      const savedNote = await adminRpc("app_admin_get_order_note", { p_order_id: order.id });
+      noteText.value = typeof savedNote === "string" ? savedNote : "";
+      noteText.disabled = false;
+      noteSaveBtn.disabled = false;
+      noteSaveBtn.textContent = "Notu Kaydet";
+      updateNoteCounter();
+      setTimeout(() => noteText.focus(), 0);
+    } catch (err) {
+      console.error(err);
+      setNoteError(err?.message || "Admin notu yüklenemedi.");
+      noteSaveBtn.textContent = "Notu Kaydet";
+    }
+  }
+
   function decorateAdminRows() {
     if (typeof role === "undefined" || role !== "admin") return;
     const table = document.getElementById("allTable");
@@ -114,7 +201,7 @@
 
     table.querySelectorAll("tr").forEach(row => {
       const detailBtn = row.querySelector("[data-all-detail]");
-      if (!detailBtn || row.querySelector("[data-admin-intervene]")) return;
+      if (!detailBtn) return;
 
       const cell = detailBtn.closest("td");
       if (!cell) return;
@@ -128,22 +215,70 @@
         cell.appendChild(wrap);
       }
 
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "btn small admin-intervene-btn";
-      button.dataset.adminIntervene = detailBtn.dataset.allDetail;
-      button.textContent = "Müdahale";
-      wrap.appendChild(button);
+      if (!row.querySelector("[data-admin-note]")) {
+        const noteButton = document.createElement("button");
+        noteButton.type = "button";
+        noteButton.className = "btn small admin-note-btn";
+        noteButton.dataset.adminNote = detailBtn.dataset.allDetail;
+        noteButton.textContent = "✎";
+        noteButton.title = "Siparişe Admin notu yaz";
+        noteButton.setAttribute("aria-label", "Siparişe Admin notu yaz");
+        wrap.appendChild(noteButton);
+      }
+
+      if (!row.querySelector("[data-admin-intervene]")) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "btn small admin-intervene-btn";
+        button.dataset.adminIntervene = detailBtn.dataset.allDetail;
+        button.textContent = "Müdahale";
+        wrap.appendChild(button);
+      }
     });
   }
 
   document.addEventListener("click", event => {
+    const note = event.target.closest?.("[data-admin-note]");
+    if (note) {
+      openNote(note.dataset.adminNote);
+      return;
+    }
+
     const intervene = event.target.closest?.("[data-admin-intervene]");
     if (intervene) {
       openTool(intervene.dataset.adminIntervene);
       return;
     }
+
     if (event.target.closest?.("[data-admin-tool-close]")) dialog.close();
+    if (event.target.closest?.("[data-admin-note-close]")) noteDialog.close();
+  });
+
+  noteText?.addEventListener("input", updateNoteCounter);
+
+  noteForm?.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!currentNoteOrderId || noteText.disabled) return;
+
+    setNoteError("");
+    noteSaveBtn.disabled = true;
+    noteSaveBtn.textContent = "Kaydediliyor...";
+    const text = noteText.value.trim();
+
+    try {
+      await adminRpc("app_admin_set_order_note", {
+        p_order_id: currentNoteOrderId,
+        p_note: text || null
+      });
+      noteDialog.close();
+      if (typeof toast === "function") toast(text ? "Admin notu kaydedildi" : "Admin notu kaldırıldı");
+    } catch (err) {
+      console.error(err);
+      setNoteError(err?.message || "Admin notu kaydedilemedi.");
+    } finally {
+      noteSaveBtn.disabled = false;
+      noteSaveBtn.textContent = "Notu Kaydet";
+    }
   });
 
   form?.addEventListener("submit", async event => {
