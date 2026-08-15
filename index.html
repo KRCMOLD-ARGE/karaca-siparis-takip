@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="staff.css">
 <link rel="stylesheet" href="notifications.css">
+<link rel="stylesheet" href="admin-gate.css">
 </head>
 <body>
 
@@ -34,13 +35,14 @@
         <option value="warehouse">Depo</option>
         <option value="operations">Operasyon</option>
         <option value="shipping">Sevkiyat</option>
-        <option value="admin">Admin</option>
+        <option value="admin" hidden>Admin</option>
       </select>
       <label class="person-label">Personel</label>
       <select id="personSelect"></select>
     </div>
     <nav class="nav">
       <button class="nav-btn active" data-view="work"><span class="ico">▦<span id="workBadge" class="nav-badge hidden">0</span></span><span id="workNavLabel">İşlerim</span></button>
+      <button class="nav-btn admin-entry-btn" id="adminEntryBtn"><span class="ico">🔒</span><span>Admin</span></button>
       <button class="nav-btn" data-view="all" id="allNav"><span class="ico">≡</span><span>Tüm Siparişler</span></button>
       <button class="nav-btn" data-view="staff" id="staffNav"><span class="ico">♟</span><span>Personel Yönetimi</span></button>
       <button class="nav-btn" data-view="flow" id="flowNav"><span class="ico">→</span><span>Akış Şeması</span></button>
@@ -172,6 +174,18 @@
 </form>
 </dialog>
 
+<dialog id="adminLoginDialog">
+<form id="adminLoginForm">
+  <div class="dialog-head"><div><h2>Admin Girişi</h2><p>Admin ekranına erişmek için kullanıcı adı ve şifre gerekli.</p></div><button type="button" class="icon-btn" data-close="adminLoginDialog">×</button></div>
+  <div class="admin-login-form">
+    <label><span>Kullanıcı Adı</span><input id="adminUsername" autocomplete="username" required placeholder="Kullanıcı adı"></label>
+    <label><span>Şifre</span><input id="adminPassword" type="password" autocomplete="current-password" required placeholder="Şifre"></label>
+  </div>
+  <div class="admin-login-note">Admin doğrulaması Supabase üzerinde yapılır; şifre site kodunun içine yazılmaz.</div>
+  <div class="dialog-actions"><div class="spacer"></div><button type="button" class="btn" data-close="adminLoginDialog">Vazgeç</button><button class="btn primary" type="submit">Admin'e Gir</button></div>
+</form>
+</dialog>
+
 <dialog id="detailDialog">
   <div class="dialog-head"><div><h2 id="detailTitle">Sipariş Detayı</h2><p id="detailSub"></p></div><button type="button" class="icon-btn" data-close="detailDialog">×</button></div>
   <div id="detailContent"></div>
@@ -180,7 +194,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>if(localStorage.getItem("karaca_simple_role")==="admin")localStorage.setItem("karaca_simple_role","marketing");</script>
 <script src="app.js"></script>
 <script src="notifications.js"></script>
+<script src="admin-gate.js"></script>
 </body>
 </html>
