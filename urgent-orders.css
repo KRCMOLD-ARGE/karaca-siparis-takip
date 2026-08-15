@@ -1,0 +1,90 @@
+.urgent-order-field{
+  border:1px solid #fda29b;
+  background:#fff5f5;
+  border-radius:12px;
+  padding:12px;
+}
+.urgent-order-field-title{
+  display:block;
+  margin-bottom:8px;
+  color:#b42318;
+  font-size:11px;
+  font-weight:850;
+}
+.urgent-order-check{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-height:42px;
+  padding:10px 12px;
+  border:1px solid #f97066;
+  border-radius:10px;
+  background:#fff;
+  cursor:pointer;
+}
+.urgent-order-check input{
+  width:18px;
+  height:18px;
+  margin:0;
+  accent-color:#d92d20;
+}
+.urgent-order-check strong{
+  display:block;
+  color:#b42318;
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.02em;
+}
+.urgent-order-check small{
+  display:block;
+  margin-top:2px;
+  color:#667085;
+  font-size:10px;
+  line-height:1.35;
+}
+.order-card.urgent-order-card{
+  border:2px solid #d92d20 !important;
+  box-shadow:0 0 0 1px rgba(217,45,32,.08),0 7px 18px rgba(180,35,24,.08);
+}
+.urgent-order-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:24px;
+  padding:4px 9px;
+  border:1px solid #f04438;
+  border-radius:999px;
+  background:#fff1f0;
+  color:#d92d20;
+  font-size:10px;
+  font-weight:950;
+  letter-spacing:.08em;
+  line-height:1;
+}
+.urgent-order-mini{
+  display:inline-flex;
+  align-items:center;
+  margin-top:4px;
+  padding:3px 7px;
+  border:1px solid #f04438;
+  border-radius:999px;
+  background:#fff1f0;
+  color:#d92d20;
+  font-size:9px;
+  font-weight:950;
+  letter-spacing:.06em;
+}
+#allTable tr.urgent-admin-row td:first-child{
+  box-shadow:inset 3px 0 0 #d92d20;
+}
+.detail-box.urgent-detail-box{
+  border-color:#f04438;
+  background:#fff5f5;
+}
+.detail-box.urgent-detail-box span,
+.detail-box.urgent-detail-box strong{
+  color:#b42318;
+}
+@media(max-width:640px){
+  .urgent-order-field{padding:10px}
+}
