@@ -14,12 +14,21 @@
     lastCounts[key] = count;
   }
 
+  function isWarehouseUnassigned(order) {
+    const ownerId = String(order?.warehouseOwnerId || "").trim();
+    const legacyOwner = String(order?.warehouseOwner || "").trim();
+    return !ownerId && !legacyOwner;
+  }
+
   function activeCountForRole() {
     if (typeof orders === "undefined" || !Array.isArray(orders) || typeof role === "undefined") return 0;
 
     switch (role) {
       case "warehouse":
-        return orders.filter(o => o.phase === "warehouse1" || o.phase === "warehouse2").length;
+        return orders.filter(o =>
+          (o.phase === "warehouse1" || o.phase === "warehouse2") &&
+          isWarehouseUnassigned(o)
+        ).length;
       case "operations":
         return orders.filter(o => o.phase === "operations").length;
       case "shipping":
@@ -40,8 +49,9 @@
     const count = activeCountForRole();
     badge.textContent = badgeText(count);
     badge.classList.toggle("hidden", count === 0);
-    badge.setAttribute("aria-label", `${count} aktif iş`);
-    badge.title = `${count} aktif iş`;
+    const label = role === "warehouse" ? `${count} atanmamış depo işi` : `${count} aktif iş`;
+    badge.setAttribute("aria-label", label);
+    badge.title = label;
     animateIfIncreased(badge, "work", count);
   }
 
@@ -68,17 +78,17 @@
 
     if (!firstBadge || !secondBadge) return;
 
-    const firstCount = orders.filter(o => o.phase === "warehouse1").length;
-    const secondCount = orders.filter(o => o.phase === "warehouse2").length;
+    const firstCount = orders.filter(o => o.phase === "warehouse1" && isWarehouseUnassigned(o)).length;
+    const secondCount = orders.filter(o => o.phase === "warehouse2" && isWarehouseUnassigned(o)).length;
 
     firstBadge.textContent = badgeText(firstCount);
     firstBadge.classList.toggle("hidden", firstCount === 0);
-    firstBadge.title = `${firstCount} sipariş İlk Depo Akışında`;
+    firstBadge.title = `${firstCount} atanmamış sipariş İlk Depo Akışında`;
     animateIfIncreased(firstBadge, "first", firstCount);
 
     secondBadge.textContent = badgeText(secondCount);
     secondBadge.classList.toggle("hidden", secondCount === 0);
-    secondBadge.title = `${secondCount} sipariş Onay Sonrası Depoda`;
+    secondBadge.title = `${secondCount} atanmamış sipariş Onay Sonrası Depoda`;
     animateIfIncreased(secondBadge, "second", secondCount);
   }
 
