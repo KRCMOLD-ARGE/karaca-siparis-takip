@@ -20,14 +20,21 @@
     return !ownerId && !legacyOwner;
   }
 
+  function isWarehouseNew(order, tab) {
+    if (typeof window.isWarehouseOrderNew === "function") {
+      return window.isWarehouseOrderNew(order, tab);
+    }
+    return isWarehouseUnassigned(order);
+  }
+
   function activeCountForRole() {
     if (typeof orders === "undefined" || !Array.isArray(orders) || typeof role === "undefined") return 0;
 
     switch (role) {
       case "warehouse":
         return orders.filter(o =>
-          (o.phase === "warehouse1" || o.phase === "warehouse2") &&
-          isWarehouseUnassigned(o)
+          (o.phase === "warehouse1" && isWarehouseNew(o, "first")) ||
+          (o.phase === "warehouse2" && isWarehouseNew(o, "second"))
         ).length;
       case "operations":
         return orders.filter(o => o.phase === "operations").length;
@@ -49,7 +56,7 @@
     const count = activeCountForRole();
     badge.textContent = badgeText(count);
     badge.classList.toggle("hidden", count === 0);
-    const label = role === "warehouse" ? `${count} atanmamış depo işi` : `${count} aktif iş`;
+    const label = role === "warehouse" ? `${count} yeni depo işi` : `${count} aktif iş`;
     badge.setAttribute("aria-label", label);
     badge.title = label;
     animateIfIncreased(badge, "work", count);
@@ -78,17 +85,17 @@
 
     if (!firstBadge || !secondBadge) return;
 
-    const firstCount = orders.filter(o => o.phase === "warehouse1" && isWarehouseUnassigned(o)).length;
-    const secondCount = orders.filter(o => o.phase === "warehouse2" && isWarehouseUnassigned(o)).length;
+    const firstCount = orders.filter(o => o.phase === "warehouse1" && isWarehouseNew(o, "first")).length;
+    const secondCount = orders.filter(o => o.phase === "warehouse2" && isWarehouseNew(o, "second")).length;
 
     firstBadge.textContent = badgeText(firstCount);
     firstBadge.classList.toggle("hidden", firstCount === 0);
-    firstBadge.title = `${firstCount} atanmamış sipariş İlk Depo Akışında`;
+    firstBadge.title = `${firstCount} yeni sipariş İlk Depo Akışında`;
     animateIfIncreased(firstBadge, "first", firstCount);
 
     secondBadge.textContent = badgeText(secondCount);
     secondBadge.classList.toggle("hidden", secondCount === 0);
-    secondBadge.title = `${secondCount} atanmamış sipariş Onay Sonrası Depoda`;
+    secondBadge.title = `${secondCount} yeni sipariş Onay Sonrası Depoda`;
     animateIfIncreased(secondBadge, "second", secondCount);
   }
 
@@ -97,7 +104,6 @@
     const start = new Date(order.createdAt).getTime();
     if (!Number.isFinite(start)) return "-";
 
-    // Tamamlanan siparişlerde süre artık ilerlemez; son güncellemede donar.
     const finishedAt = order.phase === "done" && order.updatedAt
       ? new Date(order.updatedAt).getTime()
       : Date.now();
@@ -151,7 +157,6 @@
     renderOrderAges();
   }
 
-  // app.js içindeki ana render fonksiyonuna bağlanır.
   if (typeof render === "function") {
     const baseRender = render;
     render = function (...args) {
@@ -164,13 +169,10 @@
   document.getElementById("roleSelect")?.addEventListener("change", () => setTimeout(renderNotificationBadges, 0));
   document.getElementById("personSelect")?.addEventListener("change", () => setTimeout(renderNotificationBadges, 0));
 
-  // Depoda "Üzerime Al" işlemi, kartta seçili sorumluyu esas alır.
-  // Kartta seçim yoksa sol menüde seçili Depo personeli kullanılır.
   document.addEventListener("click", event => {
     const button = event.target.closest?.("[data-claim]");
     if (!button) return;
 
-    // app.js içindeki eski click handler'ın farklı kişiyi yeniden atamasını engelle.
     event.preventDefault();
     event.stopImmediatePropagation();
 
@@ -185,7 +187,6 @@
       return;
     }
 
-    // Sol menüdeki aktif personeli de aynı kişiyle senkron tut.
     if (typeof selectedPeople === "object" && selectedPeople) {
       selectedPeople.warehouse = actor.id;
       if (typeof saveSelectedPeople === "function") saveSelectedPeople();
@@ -201,7 +202,6 @@
     }
   }, true);
 
-  // Supabase otomatik yenilemelerine ve saat/gün değişimine karşı güncel tut.
   setInterval(renderNotificationBadges, 3000);
   setTimeout(renderNotificationBadges, 0);
 })();
