@@ -6,11 +6,14 @@
   align-items:stretch;
 }
 
+/* Masaüstünde tek sipariş kartı tüm ekranı kaplamasın; depo örneğindeki gibi kompakt kalsın. */
 #workCards .order-card,
 .warehouse-order-grid .order-card{
   min-width:0;
   width:100%;
+  max-width:390px;
   height:100%;
+  justify-self:start;
   display:flex;
   flex-direction:column;
 }
@@ -40,5 +43,10 @@
   #workCards.marketing-three-grid,
   .warehouse-order-grid{
     grid-template-columns:1fr!important;
+  }
+
+  #workCards .order-card,
+  .warehouse-order-grid .order-card{
+    max-width:none;
   }
 }
