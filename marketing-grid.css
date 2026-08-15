@@ -1,20 +1,44 @@
-#workCards.marketing-three-grid{
-  grid-template-columns:repeat(3,minmax(0,1fr));
+/* Sipariş kartlarını Pazarlama, Depo, Operasyon ve Sevkiyat ekranlarında aynı düzende tut. */
+#workCards:not(.warehouse-grouped),
+.warehouse-order-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
   gap:12px;
+  align-items:stretch;
 }
 
-#workCards.marketing-three-grid .order-card{
+#workCards .order-card,
+.warehouse-order-grid .order-card{
   min-width:0;
+  width:100%;
+  height:100%;
+  display:flex;
+  flex-direction:column;
 }
 
-@media(max-width:920px){
-  #workCards.marketing-three-grid{
-    grid-template-columns:repeat(2,minmax(0,1fr));
+/* Bölümler arasında geçişte kartların alt aksiyonları aynı hizada dursun. */
+#workCards .order-card > .card-actions,
+#workCards .order-card > .inline-form{
+  margin-top:auto;
+  padding-top:12px;
+}
+
+/* Pazarlama tarafındaki özel sınıf artık sadece geriye dönük uyumluluk için kalıyor. */
+#workCards.marketing-three-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+}
+
+@media(max-width:900px){
+  #workCards:not(.warehouse-grouped),
+  #workCards.marketing-three-grid,
+  .warehouse-order-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
   }
 }
 
 @media(max-width:650px){
-  #workCards.marketing-three-grid{
-    grid-template-columns:1fr;
+  #workCards:not(.warehouse-grouped),
+  #workCards.marketing-three-grid,
+  .warehouse-order-grid{
+    grid-template-columns:1fr!important;
   }
 }
