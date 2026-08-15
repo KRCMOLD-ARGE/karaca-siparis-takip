@@ -9,6 +9,9 @@
   const orderForm = document.getElementById("orderForm");
   const orderNoInput = document.getElementById("orderNo");
 
+  // Admin parolası tarayıcı depolamasına yazılmaz; yalnızca açık sayfanın belleğinde tutulur.
+  window.__karacaAdminSession = null;
+
   const style = document.createElement("style");
   style.textContent = `
     .dialog-inline-error{
@@ -113,15 +116,18 @@
       });
 
       if (!ok) {
+        window.__karacaAdminSession = null;
         setError(adminError, "Admin kullanıcı adı veya şifre hatalı. Kullanıcı adı: admin", passwordInput);
         passwordInput?.select();
         return;
       }
 
+      window.__karacaAdminSession = { username, password };
       adminDialog.close();
       enterAdmin();
     } catch (err) {
       console.error(err);
+      window.__karacaAdminSession = null;
       setError(adminError, err?.message || "Admin doğrulaması yapılamadı. Tekrar deneyin.", passwordInput);
     } finally {
       if (submitBtn) {
@@ -171,7 +177,12 @@
   }
 
   roleSelectEl?.addEventListener("change", () => {
+    if (typeof role !== "undefined" && role !== "admin") window.__karacaAdminSession = null;
     setTimeout(syncAdminButton, 0);
+  });
+
+  document.getElementById("logoutBtn")?.addEventListener("click", () => {
+    window.__karacaAdminSession = null;
   });
 
   syncAdminButton();
