@@ -1,0 +1,8 @@
+.admin-entry-btn{margin-top:4px}
+.admin-entry-btn .ico{font-size:15px}
+.admin-entry-btn.active{background:#273449;color:#fff}
+.admin-login-form{padding:18px 20px;display:grid;gap:13px}
+.admin-login-form label{display:grid;gap:6px;font-size:11px;font-weight:750}
+.admin-login-form input{width:100%;border:1px solid #d0d5dd;border-radius:9px;padding:10px 11px;outline:none;background:#fff}
+.admin-login-form input:focus{border-color:#667085;box-shadow:0 0 0 3px rgba(102,112,133,.1)}
+.admin-login-note{margin:0 20px 4px;padding:10px 11px;border-radius:10px;background:#f8fafc;border:1px solid #edf0f2;color:#667085;font-size:11px;line-height:1.5}
