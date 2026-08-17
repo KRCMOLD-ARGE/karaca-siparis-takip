@@ -1,4 +1,25 @@
 (() => {
+  // İlk Depo akışında "Toplandı" ile "Tamamlandı" aynı sonuca yakın iki ayrı adım
+  // oluşturuyordu. Kartta artık yalnızca Tamamlandı kullanılıyor.
+  if (typeof mapOrder === "function") {
+    const baseMapOrder = mapOrder;
+    mapOrder = function (raw) {
+      const mapped = baseMapOrder(raw);
+      // Eski kayıtlarda Toplandı varsa kartta tekrar göstermeyip Toplanıyor olarak ele al.
+      if (mapped?.phase === "warehouse1" && mapped?.warehouse1Status === "Toplandı") {
+        mapped.warehouse1Status = "Toplanıyor";
+      }
+      return mapped;
+    };
+  }
+
+  if (typeof warehouse1Options === "function") {
+    const baseWarehouse1Options = warehouse1Options;
+    warehouse1Options = function (order) {
+      return baseWarehouse1Options(order).filter(status => status !== "Toplandı");
+    };
+  }
+
   function hasWarehouseOwner(order) {
     return !!String(order?.warehouseOwnerId || order?.warehouseOwner || "").trim();
   }
