@@ -153,10 +153,24 @@
     });
   }
 
+  // Depo kartındaki personel listesi artık sadece seçim yapar.
+  // Gerçek atama ve Yeni Gelen -> Yürüyen geçişi yalnızca "Üzerime Al" tıklanınca yapılır.
+  function prepareWarehouseClaimControls() {
+    if (typeof role === "undefined" || role !== "warehouse") return;
+
+    document.querySelectorAll("#workCards select[data-owner]").forEach(select => {
+      select.onchange = event => {
+        event.stopPropagation();
+      };
+      select.title = "Personeli seçin; atama Üzerime Al butonuna basınca yapılır.";
+    });
+  }
+
   function renderNotificationBadges() {
     renderWorkBadge();
     renderWarehouseTabBadges();
     renderOrderAges();
+    prepareWarehouseClaimControls();
   }
 
   if (typeof render === "function") {
@@ -181,11 +195,14 @@
     const row = button.closest(".inline-form");
     const ownerSelect = row?.querySelector("[data-owner]");
     const sidebarSelect = document.getElementById("personSelect");
-    const selectedId = ownerSelect?.value || sidebarSelect?.value || "";
+
+    // Kartta personel seçimi varsa sadece onu kullan. Boşsa otomatik olarak üstteki
+    // personeli atama; kullanıcı önce karttan kimi atayacağını seçsin.
+    const selectedId = ownerSelect ? ownerSelect.value : (sidebarSelect?.value || "");
     const actor = typeof personById === "function" ? personById(selectedId) : null;
 
     if (!actor || !actor.roles?.includes("warehouse")) {
-      if (typeof toast === "function") toast("Önce Depo personelini seçin");
+      if (typeof toast === "function") toast("Önce karttan Depo personelini seçin");
       return;
     }
 
@@ -196,7 +213,10 @@
     if (sidebarSelect) sidebarSelect.value = actor.id;
 
     if (typeof updateOrder === "function") {
+      const originalText = button.textContent;
       button.disabled = true;
+      button.textContent = "Atanıyor...";
+
       try {
         await updateOrder(
           button.dataset.claim,
@@ -204,9 +224,8 @@
           `${actor.name} siparişi üzerine aldı.`
         );
 
-        // updateOrder veriyi tazeledikten sonra kartın yeni/yürüyen grubunu
-        // yeniden hesapla. Böylece İlk Depo Akışında "Üzerime Al" denildiği anda
-        // sipariş Yeni Gelen'den Yürüyen Siparişler'e taşınır.
+        // updateOrder sunucudaki atamayı kaydedip veriyi yeniler. Bu çağrıdan sonra
+        // grup tekrar hesaplanır: atanmış sipariş artık Yeni Gelen değil Yürüyen'dir.
         if (typeof window.groupWarehouseOrders === "function") {
           window.groupWarehouseOrders();
         }
@@ -215,7 +234,10 @@
         }
         renderNotificationBadges();
       } finally {
-        if (button.isConnected) button.disabled = false;
+        if (button.isConnected) {
+          button.disabled = false;
+          button.textContent = originalText;
+        }
       }
     }
   }, true);
