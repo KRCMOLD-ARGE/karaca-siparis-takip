@@ -171,7 +171,7 @@
   document.getElementById("roleSelect")?.addEventListener("change", () => setTimeout(renderNotificationBadges, 0));
   document.getElementById("personSelect")?.addEventListener("change", () => setTimeout(renderNotificationBadges, 0));
 
-  document.addEventListener("click", event => {
+  document.addEventListener("click", async event => {
     const button = event.target.closest?.("[data-claim]");
     if (!button) return;
 
@@ -196,11 +196,27 @@
     if (sidebarSelect) sidebarSelect.value = actor.id;
 
     if (typeof updateOrder === "function") {
-      updateOrder(
-        button.dataset.claim,
-        { warehouse_owner_id: actor.id },
-        `${actor.name} siparişi üzerine aldı.`
-      );
+      button.disabled = true;
+      try {
+        await updateOrder(
+          button.dataset.claim,
+          { warehouse_owner_id: actor.id },
+          `${actor.name} siparişi üzerine aldı.`
+        );
+
+        // updateOrder veriyi tazeledikten sonra kartın yeni/yürüyen grubunu
+        // yeniden hesapla. Böylece İlk Depo Akışında "Üzerime Al" denildiği anda
+        // sipariş Yeni Gelen'den Yürüyen Siparişler'e taşınır.
+        if (typeof window.groupWarehouseOrders === "function") {
+          window.groupWarehouseOrders();
+        }
+        if (typeof window.syncWarehouseWorkload === "function") {
+          window.syncWarehouseWorkload();
+        }
+        renderNotificationBadges();
+      } finally {
+        if (button.isConnected) button.disabled = false;
+      }
     }
   }, true);
 
