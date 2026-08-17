@@ -20,11 +20,11 @@
     panel.setAttribute("aria-label", "Depo iş yükü");
     panel.innerHTML = `
       <div class="warehouse-workload-head">
-        <div><b>Depo İş Yükü</b><small>Aktif depo işlerinin personele dağılımı</small></div>
+        <div><b>Depo İş Yükü</b><small>Personele bağlı devam eden işlerin dağılımı</small></div>
         <span class="warehouse-workload-total" id="warehouseWorkloadTotal">0</span>
       </div>
       <div class="warehouse-workload-list" id="warehouseWorkloadList"></div>
-      <div class="warehouse-workload-foot">Liste en az işi olan personelden en çok işi olana doğru sıralanır. Operasyona veya Sevkiyata geçen işler sayıya dahil edilmez.</div>
+      <div class="warehouse-workload-foot">Liste en az işi olan personelden en çok işi olana doğru sıralanır. Operasyonda bekleyen ve aynı Depo personeline geri dönecek siparişler yükte kalır; iş ancak Sevkiyata geçtiğinde Depo yükünden düşer.</div>
     `;
 
     workCards.parentNode.insertBefore(layout, workCards);
@@ -49,11 +49,12 @@
   }
 
   function countsAsWarehouseLoad(order) {
-    if (!order || !["warehouse1", "warehouse2"].includes(order.phase)) return false;
+    if (!order || !["warehouse1", "operations", "warehouse2"].includes(order.phase)) return false;
     if (!ownerIdForOrder(order)) return false;
 
-    // Operasyondan ikinci Depo aşamasına yeni dönen kayıt eski depo sorumlusunu
-    // taşıyabilir. Yeniden atanana kadar bunu personelin aktif yükü sayma.
+    // Onay Sonrası Depo'ya dönmüş ancak henüz gerçekten bir sorumluya bağlanmamış
+    // eski kayıtları yük hesabına dahil etme. Otomatik devam eden İlk Depo sorumlusu
+    // ise warehouse-owner-continuity.js tarafından atanmış kabul edilir.
     if (order.phase === "warehouse2" && typeof window.isWarehouseOrderNew === "function") {
       if (window.isWarehouseOrderNew(order, "second")) return false;
     }
@@ -66,6 +67,7 @@
     const map = new Map(people.map(person => [person.id, {
       person,
       first: 0,
+      operations: 0,
       second: 0,
       total: 0
     }]));
@@ -76,6 +78,7 @@
         const row = map.get(ownerIdForOrder(order));
         if (!row) return;
         if (order.phase === "warehouse1") row.first += 1;
+        if (order.phase === "operations") row.operations += 1;
         if (order.phase === "warehouse2") row.second += 1;
         row.total += 1;
       });
@@ -84,6 +87,8 @@
     return [...map.values()].sort((a, b) =>
       a.total - b.total ||
       a.first - b.first ||
+      a.operations - b.operations ||
+      a.second - b.second ||
       a.person.name.localeCompare(b.person.name, "tr")
     );
   }
@@ -111,7 +116,7 @@
 
     const activeTotal = loads.reduce((sum, row) => sum + row.total, 0);
     total.textContent = String(activeTotal);
-    total.title = `${activeTotal} aktif depo işi personele atanmış`;
+    total.title = `${activeTotal} Depo işi personele bağlı olarak devam ediyor`;
     list.innerHTML = "";
 
     if (!loads.length) {
@@ -136,13 +141,13 @@
       const name = document.createElement("strong");
       name.textContent = row.person.name;
       const breakdown = document.createElement("small");
-      breakdown.textContent = `İlk Depo: ${row.first} · Onay Sonrası: ${row.second}`;
+      breakdown.textContent = `İlk Depo: ${row.first} · Operasyonda: ${row.operations} · Onay Sonrası: ${row.second}`;
       info.append(name, breakdown);
 
       const count = document.createElement("span");
       count.className = `warehouse-workload-count ${loadClass(row.total)}`;
       count.textContent = `${row.total} iş`;
-      count.title = `${row.person.name}: ${row.total} aktif depo işi`;
+      count.title = `${row.person.name}: ${row.total} devam eden Depo işi`;
 
       item.append(avatar, info, count);
       list.appendChild(item);
