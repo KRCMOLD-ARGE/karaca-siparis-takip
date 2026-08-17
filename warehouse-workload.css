@@ -75,7 +75,7 @@
   display:grid;
   grid-template-columns:32px minmax(0,1fr) auto;
   gap:9px;
-  align-items:center;
+  align-items:start;
   padding:9px;
   border:1px solid #edf0f2;
   border-radius:11px;
@@ -109,10 +109,13 @@
 
 .warehouse-workload-info small{
   display:block;
-  margin-top:3px;
+  margin-top:4px;
   color:#98a2b3;
   font-size:9px;
-  white-space:nowrap;
+  line-height:1.45;
+  white-space:normal;
+  overflow-wrap:normal;
+  word-break:normal;
 }
 
 .warehouse-workload-count{
@@ -124,6 +127,7 @@
   font-weight:900;
   background:#ecfdf3;
   color:#067647;
+  align-self:start;
 }
 
 .warehouse-workload-count.load-1,
