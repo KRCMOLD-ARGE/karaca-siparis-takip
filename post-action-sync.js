@@ -1,7 +1,7 @@
 (() => {
   // Siparis aksiyonlarinda kayit islemi tamamen bittikten 100 ms sonra,
-  // ekran/sekmeler arasi gecislerde ise gecisten 100 ms sonra zorunlu veri
-  // senkronizasyonu yap. Bu ikinci tur ekranda eski veri kalmasini temizler.
+  // diger anlamli ekran/sekme/filtre/personel/buton etkileşimlerinde ise
+  // etkileşimden 100 ms sonra zorunlu veri senkronizasyonu yap.
   if (typeof updateOrder !== "function") return;
 
   const baseUpdateOrder = updateOrder;
@@ -27,9 +27,9 @@
     syncTimer = setTimeout(forceSyncWhenIdle, delay);
   }
 
+  // Veri yazan siparis aksiyonlarinda ikinci kontrolu, yazma ve ilk yenileme
+  // tamamen bittikten sonra baslat. Boylece 100 ms kontrolu kayittan once kosmaz.
   updateOrder = async function (...args) {
-    // Ekstra senkronizasyon sayaci artik aksiyon basinda degil, Supabase yazma ve
-    // updateOrder icindeki ilk veri yenilemesi tamamen bittikten sonra baslar.
     try {
       return await baseUpdateOrder.apply(this, args);
     } finally {
@@ -37,14 +37,24 @@
     }
   };
 
-  // Ilk Depo Akisi <-> Onay Sonrasi Depo ve diger ekran gecislerinde yeni ekran
-  // acildiktan 100 ms sonra veriyi tekrar Supabase'den dogrula.
+  // Uygulamadaki anlamli buton ve ekran gecislerini tek standarda bagla:
+  // Ilk Depo / Onay Sonrasi, sol menu, Yenile, Temizle, Detay, dialog butonlari,
+  // claim/send/approve/ship gibi butonlar dahil tum button tiklamalari.
   document.addEventListener("click", event => {
-    const tabOrView = event.target.closest?.("[data-wh-tab], .nav-btn[data-view]");
-    if (!tabOrView) return;
+    const control = event.target.closest?.("button, [data-wh-tab], .nav-btn[data-view]");
+    if (!control) return;
     scheduleForcedSync(100);
   });
 
-  // Pazarlama / Depo / Operasyon / Sevkiyat bolum degisiminde de 100 ms korumasi.
-  document.getElementById("roleSelect")?.addEventListener("change", () => scheduleForcedSync(100));
+  // Bolum, personel, durum filtresi, depo sorumlusu, depo durumlari ve formdaki
+  // select/checkbox/radio degisimlerinde de ayni 100 ms standardini uygula.
+  document.addEventListener("change", event => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    if (!target.matches("select, input[type='checkbox'], input[type='radio']")) return;
+    scheduleForcedSync(100);
+  });
+
+  // Arama kutusu yalnizca yerel filtreleme yaptigi icin her tus vurusunda Supabase
+  // okumasi baslatmiyoruz; aksi halde hizlandirmak yerine gereksiz trafik olusur.
 })();
