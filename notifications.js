@@ -1,4 +1,82 @@
 (() => {
+  // Kullanıcı işlemlerinden sonra ekran yenilemesinin kaybolmaması için tüm yenilemeleri
+  // sıraya al. Sipariş güncellemelerinde personel listesini tekrar çekmeyip yalnızca
+  // siparişleri yenileyerek İlk Depo ekranını daha hızlı tepki verir hale getir.
+  function waitForLegacyRefresh() {
+    if (typeof refreshing === "undefined" || !refreshing) return Promise.resolve();
+    return new Promise(resolve => {
+      const check = () => {
+        if (!refreshing) resolve();
+        else setTimeout(check, 20);
+      };
+      check();
+    });
+  }
+
+  let refreshQueue = waitForLegacyRefresh();
+
+  async function performQueuedRefresh(mode = "full", silent = false) {
+    if (typeof accessCode === "undefined" || !accessCode) return;
+
+    refreshing = true;
+    try {
+      if (mode === "orders") {
+        const orderData = await rpc("app_list_orders", { p_passcode: accessCode });
+        orders = (Array.isArray(orderData) ? orderData : []).map(mapOrder);
+      } else {
+        const [orderData, staffData] = await Promise.all([
+          rpc("app_list_orders", { p_passcode: accessCode }),
+          rpc("app_list_staff", { p_passcode: accessCode })
+        ]);
+        orders = (Array.isArray(orderData) ? orderData : []).map(mapOrder);
+        staff = (Array.isArray(staffData) ? staffData : []).map(mapStaff);
+      }
+
+      render();
+      if (!silent && typeof toast === "function") toast("Veriler yenilendi");
+    } catch (err) {
+      console.error(err);
+      if (typeof isAuthError === "function" && isAuthError(err)) {
+        if (typeof lockApp === "function") lockApp("Erişim kodu geçersiz veya değiştirildi.");
+      } else if (!silent && typeof toast === "function") {
+        toast("Supabase bağlantısı kurulamadı");
+      }
+    } finally {
+      refreshing = false;
+    }
+  }
+
+  function enqueueRefresh(mode = "full", silent = false) {
+    const run = () => performQueuedRefresh(mode, silent);
+    const next = refreshQueue.then(run, run);
+    refreshQueue = next.catch(() => {});
+    return next;
+  }
+
+  refreshData = function (silent = false) {
+    return enqueueRefresh("full", silent);
+  };
+
+  async function refreshOrdersOnly(silent = true) {
+    return enqueueRefresh("orders", silent);
+  }
+
+  updateOrder = async function (id, patch, eventText) {
+    try {
+      await rpc("app_update_order", {
+        p_passcode: accessCode,
+        p_id: id,
+        p_patch: patch,
+        p_event_text: eventText
+      });
+      await refreshOrdersOnly(true);
+      if (typeof toast === "function") toast(eventText);
+    } catch (err) {
+      console.error(err);
+      if (typeof toast === "function") toast(err.message || "Güncelleme yapılamadı");
+    }
+  };
+
   const lastCounts = { work: -1, first: -1, second: -1 };
 
   function badgeText(count) {
