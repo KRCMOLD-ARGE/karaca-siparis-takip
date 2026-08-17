@@ -85,11 +85,19 @@
   }
 
   function groupWarehouseOrders() {
-    if (typeof role === "undefined" || role !== "warehouse") return;
-    if (typeof view !== "undefined" && view !== "work") return;
-
     const container = document.getElementById("workCards");
     if (!container) return;
+
+    // Depo dışına çıkıldığında Depo'ya özel display:block sınıfını mutlaka temizle.
+    // Aksi halde Operasyon/Pazarlama/Sevkiyat kartları grid yerine alt alta kalıyordu.
+    if (typeof role === "undefined" || role !== "warehouse") {
+      container.classList.remove("warehouse-grouped");
+      return;
+    }
+    if (typeof view !== "undefined" && view !== "work") {
+      container.classList.remove("warehouse-grouped");
+      return;
+    }
 
     const cards = [...container.children].filter(node => node.classList?.contains("order-card"));
     if (!cards.length) {
