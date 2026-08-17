@@ -126,7 +126,7 @@
             <div class="arrow">→</div>
             <div class="flow-step"><b>3. Operasyon</b><span>Onay Bekliyor → Onaylandı. Onaylanınca sipariş tekrar Depo'ya döner.</span></div>
             <div class="arrow">→</div>
-            <div class="flow-step"><b>4. Depo · Son Aşama</b><span>Sorumlu yeniden atanır. Hazırlanıyor → Toplandı. Toplandı seçilir, ardından Sevkiyata Gönder ile aktarılır.</span></div>
+            <div class="flow-step"><b>4. Depo · Son Aşama</b><span>İlk Depo sorumlusu otomatik devam eder. Hazırlanıyor → Toplandı. Toplandı seçilir, ardından Sevkiyata Gönder ile aktarılır.</span></div>
             <div class="arrow">→</div>
             <div class="flow-step"><b>5. Sevkiyat</b><span>Sipariş Hazır görünür. Sevk Edildi seçildiğinde süreç tamamlanır.</span></div>
           </div>
@@ -160,7 +160,7 @@
 <dialog id="staffDialog">
 <form id="staffForm">
   <input type="hidden" id="staffId">
-  <div class="dialog-head"><div><h2 id="staffDialogTitle">Personel Ekle</h2><p>Personelin bir veya birden fazla bölüm rolü olabilir.</p></div><button type="button" class="icon-btn" data-close="staffDialog">×</button></div>
+  <div class="dialog-head"><div><h2 id="staffDialogTitle">Personeli Düzenle</h2><p>Personelin bir veya birden fazla bölüm rolü olabilir.</p></div><button type="button" class="icon-btn" data-close="staffDialog">×</button></div>
   <div class="form-grid">
     <label class="span2"><span>Ad Soyad *</span><input id="staffName" required placeholder="Örn. Ad Soyad"></label>
     <div class="span2">
@@ -202,6 +202,7 @@
 <script>if(localStorage.getItem("karaca_simple_role")==="admin")localStorage.setItem("karaca_simple_role","marketing");</script>
 <script src="app.js"></script>
 <script src="warehouse-groups.js"></script>
+<script src="warehouse-owner-continuity.js"></script>
 <script src="warehouse-second-stage.js"></script>
 <script src="marketing-grid.js"></script>
 <script src="urgent-orders.js"></script>
