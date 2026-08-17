@@ -30,6 +30,16 @@
   grid-template-columns:repeat(3,minmax(0,1fr))!important;
 }
 
+/* Geniş masaüstü ekranlarda alanı daha iyi kullan: 4 kart yan yana. */
+@media(min-width:1450px){
+  #workCards:not(.warehouse-grouped),
+  #workCards.marketing-three-grid,
+  .warehouse-order-grid{
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  }
+}
+
+/* Normal masaüstü: 3 kart; tablet / dar pencere: 2 kart. */
 @media(max-width:900px){
   #workCards:not(.warehouse-grouped),
   #workCards.marketing-three-grid,
@@ -38,6 +48,7 @@
   }
 }
 
+/* Telefon: tek kart. */
 @media(max-width:650px){
   #workCards:not(.warehouse-grouped),
   #workCards.marketing-three-grid,
