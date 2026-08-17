@@ -1,8 +1,7 @@
 (() => {
-  // Her sipariş aksiyonundan yaklaşık 500 ms sonra bir kez daha zorunlu veri
-  // senkronizasyonu yap. İlk hızlı render yine updateOrder içinde gerçekleşir;
-  // bu ikinci tur, ekranda eski durum kalması / gecikmeli grup-sayaç güncellenmesi
-  // gibi yarış durumlarını temizlemek için güvenlik ağıdır.
+  // Her siparis aksiyonundan ve ekran/sekmeler arasi gecisten yaklasik 500 ms sonra
+  // bir kez daha zorunlu veri senkronizasyonu yap. Ilk hizli render yine mevcut
+  // akista gerceklesir; bu ikinci tur ekranda eski veri kalmasini temizler.
   if (typeof updateOrder !== "function") return;
 
   const baseUpdateOrder = updateOrder;
@@ -11,15 +10,15 @@
   function forceSyncWhenIdle() {
     if (typeof accessCode === "undefined" || !accessCode) return;
 
-    // O anda başka bir veri yenilemesi çalışıyorsa onun bitmesini bekle. Böylece
-    // iki Supabase okuması aynı anda render etmeye çalışmaz.
+    // O anda baska bir veri yenilemesi calisiyorsa onun bitmesini bekle. Boylece
+    // iki Supabase okumasi ayni anda render etmeye calismaz.
     if (typeof refreshing !== "undefined" && refreshing) {
       syncTimer = setTimeout(forceSyncWhenIdle, 100);
       return;
     }
 
     if (typeof refreshData === "function") {
-      Promise.resolve(refreshData(true)).catch(err => console.error("500ms otomatik senkronizasyonu başarısız", err));
+      Promise.resolve(refreshData(true)).catch(err => console.error("500ms otomatik senkronizasyonu basarisiz", err));
     }
   }
 
@@ -29,10 +28,21 @@
   }
 
   updateOrder = function (...args) {
-    // Sayaç aksiyon anında başlar. 500 ms geldiğinde kayıt/yenileme hâlâ sürüyorsa
-    // forceSyncWhenIdle mevcut işlemin bitmesini bekleyip hemen ardından çalışır.
+    // Sayac aksiyon aninda baslar. 500 ms geldiginde kayit/yenileme hala suruyorsa
+    // forceSyncWhenIdle mevcut islemin bitmesini bekleyip hemen ardindan calisir.
     const result = baseUpdateOrder.apply(this, args);
     scheduleForcedSync();
     return result;
   };
+
+  // Ilk Depo Akisi <-> Onay Sonrasi Depo gibi sekme gecislerinde de yeni ekran
+  // acildiktan yarim saniye sonra veriyi tekrar Supabase'den dogrula.
+  document.addEventListener("click", event => {
+    const tabOrView = event.target.closest?.("[data-wh-tab], .nav-btn[data-view]");
+    if (!tabOrView) return;
+    scheduleForcedSync();
+  });
+
+  // Pazarlama / Depo / Operasyon / Sevkiyat bolum degisiminde de ayni korumayi uygula.
+  document.getElementById("roleSelect")?.addEventListener("change", scheduleForcedSync);
 })();
