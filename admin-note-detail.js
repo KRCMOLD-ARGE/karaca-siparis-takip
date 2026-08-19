@@ -44,6 +44,15 @@
       pointer-events:none;
       z-index:2;
     }
+    .admin-elapsed-time{
+      white-space:nowrap;
+      font-weight:800;
+      color:#475467;
+      font-variant-numeric:tabular-nums;
+    }
+    .admin-elapsed-time.is-done{
+      color:#067647;
+    }
   `;
   document.head.appendChild(style);
 
@@ -84,6 +93,12 @@
   function orderById(id) {
     if (typeof orders === "undefined" || !Array.isArray(orders)) return null;
     return orders.find(item => item.id === id) || null;
+  }
+
+  function orderByNo(orderNo) {
+    if (typeof orders === "undefined" || !Array.isArray(orders)) return null;
+    const target = String(orderNo || "").trim();
+    return orders.find(item => String(item.orderNo || "").trim() === target) || null;
   }
 
   function isUnread(order) {
@@ -132,6 +147,71 @@
         badge.title = "Yeni Admin notu";
         button.appendChild(badge);
       }
+    });
+  }
+
+  function elapsedText(order) {
+    if (!order?.createdAt) return "-";
+    const start = new Date(order.createdAt).getTime();
+    if (!Number.isFinite(start)) return "-";
+
+    const end = order.phase === "done" && order.updatedAt
+      ? new Date(order.updatedAt).getTime()
+      : Date.now();
+    if (!Number.isFinite(end)) return "-";
+
+    const totalMinutes = Math.max(0, Math.floor((end - start) / 60000));
+    if (totalMinutes < 60) return `${totalMinutes} dk`;
+
+    const totalHours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (totalHours < 24) return minutes ? `${totalHours} sa ${minutes} dk` : `${totalHours} sa`;
+
+    const days = Math.floor(totalHours / 24);
+    const hours = totalHours % 24;
+    return hours ? `${days} gün ${hours} sa` : `${days} gün`;
+  }
+
+  function decorateAdminElapsedTimes() {
+    if (typeof role === "undefined" || role !== "admin") return;
+    if (typeof orders === "undefined" || !Array.isArray(orders)) return;
+
+    const table = document.querySelector(".admin-order-table");
+    const body = document.getElementById("allTable");
+    if (!table || !body) return;
+
+    const headRow = table.tHead?.rows?.[0] || null;
+    if (headRow && !headRow.querySelector("[data-admin-elapsed-head]")) {
+      const th = document.createElement("th");
+      th.dataset.adminElapsedHead = "1";
+      th.textContent = "GEÇEN SÜRE";
+      headRow.insertBefore(th, headRow.lastElementChild || null);
+    }
+
+    body.querySelectorAll("tr").forEach(row => {
+      const emptyCell = row.querySelector("td[colspan]");
+      if (emptyCell) {
+        emptyCell.colSpan = Math.max(Number(emptyCell.colSpan) || 11, 12);
+        return;
+      }
+
+      const orderNo = row.querySelector("td:first-child strong")?.textContent?.trim() || "";
+      const order = orderByNo(orderNo);
+      if (!order) return;
+
+      let cell = row.querySelector("[data-admin-elapsed-cell]");
+      if (!cell) {
+        cell = document.createElement("td");
+        cell.dataset.adminElapsedCell = "1";
+        cell.className = "admin-elapsed-time";
+        row.insertBefore(cell, row.lastElementChild || null);
+      }
+
+      cell.textContent = elapsedText(order);
+      cell.classList.toggle("is-done", order.phase === "done");
+      cell.title = order.phase === "done"
+        ? "Siparişin açılıştan tamamlanmaya kadar toplam süresi"
+        : "Sipariş açıldığından beri geçen süre";
     });
   }
 
@@ -210,6 +290,7 @@
     renderAll = function (...args) {
       const result = baseRenderAll.apply(this, args);
       decorateNoteBadges();
+      decorateAdminElapsedTimes();
       return result;
     };
   }
@@ -219,12 +300,24 @@
     render = function (...args) {
       const result = baseRender.apply(this, args);
       decorateNoteBadges();
+      decorateAdminElapsedTimes();
       return result;
     };
   }
 
-  document.getElementById("roleSelect")?.addEventListener("change", () => setTimeout(decorateNoteBadges, 0));
+  document.getElementById("roleSelect")?.addEventListener("change", () => setTimeout(() => {
+    decorateNoteBadges();
+    decorateAdminElapsedTimes();
+  }, 0));
   document.getElementById("personSelect")?.addEventListener("change", () => setTimeout(decorateNoteBadges, 0));
+  document.getElementById("allNav")?.addEventListener("click", () => setTimeout(decorateAdminElapsedTimes, 0));
 
-  setTimeout(decorateNoteBadges, 0);
+  setInterval(() => {
+    if (typeof role !== "undefined" && role === "admin") decorateAdminElapsedTimes();
+  }, 60000);
+
+  setTimeout(() => {
+    decorateNoteBadges();
+    decorateAdminElapsedTimes();
+  }, 0);
 })();
